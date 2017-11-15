@@ -3,6 +3,7 @@ package main
 import (
 	"bikelib"
 	"fmt"
+	"maplib"
 	"os"
 
 	"github.com/fatih/color"
@@ -41,11 +42,21 @@ func printBikeData() {
 	}
 }
 
+func getGeoLoc() {
+	geoLoc := maplib.MapAddr{Address: "北卫家园6号楼", City: "北京"}
+	bike, err := geoLoc.GetGeoLoc()
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(bike)
+}
+
 func main() {
 	app := initCLI()
 	app.Action = func(c *cli.Context) error {
 		return nil
 	}
 	app.Run(os.Args)
-	printBikeData()
+	// printBikeData()
+	getGeoLoc()
 }
