@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/url"
+	"strconv"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -21,10 +22,12 @@ type Ofobike struct {
 func (ofo *Ofobike) GetNearbyCar() ([]OfoCar, error) {
 
 	params := url.Values{}
-	params.Add("lat", "40.02015250763075")
-	params.Add("lng", "116.42243937431424")
+	lat := strconv.FormatFloat(ofo.Lat, 'f', 6, 64)
+	lng := strconv.FormatFloat(ofo.Lng, 'f', 6, 64)
+	params.Add("lat", lat)
+	params.Add("lng", lng)
 	params.Add("token", ofoToken)
-	params.Add("source", "-5")
+	params.Add("source", "0")
 
 	nearbyData, err := PostFormData(ofoURL, params)
 	if err != nil {

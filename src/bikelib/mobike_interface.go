@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/url"
+	"strconv"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -12,17 +13,20 @@ const mobikeURL = "https://mwx.mobike.com/mobike-api/rent/nearbyBikesInfo.do"
 
 // Mobike struct
 type Mobike struct {
-	Lat float64
-	Lng float64
+	Lat      float64
+	Lng      float64
+	CityCode string
 }
 
 // GetNearbyCar interface
 func (mobike *Mobike) GetNearbyCar() ([]MobikeCar, error) {
 
 	params := url.Values{}
-	params.Add("latitude", "40.02015250763075")
-	params.Add("longitude", "116.42243937431424")
-	// params.Add("citycode", "010")
+	lat := strconv.FormatFloat(mobike.Lat, 'f', 6, 64)
+	lng := strconv.FormatFloat(mobike.Lng, 'f', 6, 64)
+	params.Add("latitude", lat)
+	params.Add("longitude", lng)
+	params.Add("citycode", mobike.CityCode)
 
 	nearbyData, err := PostFormData(mobikeURL, params)
 	if err != nil {
