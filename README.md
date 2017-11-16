@@ -33,7 +33,7 @@ sobike -c 城市 你的地址
 GO Dep
 
 ```bash
-go get github.com/fatih/color
+go get github.com/fatih/color
 go get github.com/sirupsen/logrus
 go get github.com/urfave/cli
 ```
