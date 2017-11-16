@@ -16,4 +16,5 @@
 
 # Custome
 .vscode/
-.pkg/
+pkg/
+release/
