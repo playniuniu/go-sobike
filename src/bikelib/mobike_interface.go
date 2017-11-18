@@ -13,13 +13,13 @@ const mobikeURL = "https://mwx.mobike.com/mobike-api/rent/nearbyBikesInfo.do"
 
 // Mobike struct
 type Mobike struct {
-	Lat      float64
 	Lng      float64
+	Lat      float64
 	CityCode string
 }
 
 // GetNearbyCar interface
-func (mobike *Mobike) GetNearbyCar() ([]MobikeCar, error) {
+func (mobike Mobike) GetNearbyCar() ([]BikeData, error) {
 
 	params := url.Values{}
 	lat := strconv.FormatFloat(mobike.Lat, 'f', 6, 64)
@@ -37,7 +37,7 @@ func (mobike *Mobike) GetNearbyCar() ([]MobikeCar, error) {
 }
 
 // parseJSON interface
-func (mobike *Mobike) parseJSON(jsonData []byte) ([]MobikeCar, error) {
+func (mobike Mobike) parseJSON(jsonData []byte) ([]BikeData, error) {
 	var parseData MobikeJSON
 
 	err := json.Unmarshal(jsonData, &parseData)
@@ -53,5 +53,15 @@ func (mobike *Mobike) parseJSON(jsonData []byte) ([]MobikeCar, error) {
 		return nil, errors.New(parseData.Message)
 	}
 
-	return parseData.Object, nil
+	bikeRes := make([]BikeData, len(parseData.Object))
+	for index, el := range parseData.Object {
+		bikeRes[index] = BikeData{
+			Lng:     el.DistX,
+			Lat:     el.DistY,
+			CarNo:   strconv.Itoa(el.DistNum),
+			CarType: "mobike",
+		}
+	}
+
+	return bikeRes, nil
 }

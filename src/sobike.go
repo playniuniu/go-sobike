@@ -22,7 +22,7 @@ const appBanner = `
 
 `
 
-type chanStruct struct {
+type chanData struct {
 	Error error
 	Data  interface{}
 	Type  string
@@ -59,9 +59,11 @@ func initCLI() {
 }
 
 func run(address string, city string) {
+	// 打印 Banner
 	color.HiCyan(appBanner)
 
-	mapChan := make(chan chanStruct, 1)
+	// 获取地图的 Lng, Lat
+	mapChan := make(chan chanData, 1)
 	go getMapData(mapChan, address, city)
 	mapRes := <-mapChan
 	close(mapChan)
@@ -69,14 +71,33 @@ func run(address string, city string) {
 	if mapRes.Error != nil {
 		return
 	}
-
-	bikeChan := make(chan chanStruct, 2)
 	mapLoc := mapRes.Data.(maplib.MapLocation)
+
+	// 获取单车信息
+	var bike bikelib.BikeInterface
+	bikeChan := make(chan chanData, 2)
 	color.HiCyan("正在为你寻找 %v 附近的自行车", mapLoc.Address)
 
-	go getMobikeData(bikeChan, mapLoc)
-	go getOfoData(bikeChan, mapLoc)
+	// 获取 Mobike
+	go func() {
+		bike = bikelib.Mobike{
+			Lat:      mapLoc.Lat,
+			Lng:      mapLoc.Lng,
+			CityCode: mapLoc.CityCode,
+		}
+		getBikeData(bikeChan, bike, "mobike")
+	}()
 
+	// 获取 Ofo
+	go func() {
+		bike = bikelib.Ofobike{
+			Lat: mapLoc.Lat,
+			Lng: mapLoc.Lng,
+		}
+		getBikeData(bikeChan, bike, "ofo")
+	}()
+
+	// 打印单车信息
 	for i := 0; i < cap(bikeChan); i++ {
 		select {
 		case dataChan := <-bikeChan:
@@ -86,50 +107,7 @@ func run(address string, city string) {
 	close(bikeChan)
 }
 
-func getMobikeData(bikeChan chan chanStruct, mapLoc maplib.MapLocation) {
-	bike := bikelib.Mobike{
-		Lat:      mapLoc.Lat,
-		Lng:      mapLoc.Lng,
-		CityCode: mapLoc.CityCode,
-	}
-	data, err := bike.GetNearbyCar()
-	if err != nil {
-		bikeChan <- chanStruct{
-			Error: err,
-			Data:  nil,
-			Type:  "mobike",
-		}
-	} else {
-		bikeChan <- chanStruct{
-			Error: nil,
-			Data:  data,
-			Type:  "mobike",
-		}
-	}
-}
-
-func getOfoData(bikeChan chan chanStruct, mapLoc maplib.MapLocation) {
-	bike := bikelib.Ofobike{
-		Lat: mapLoc.Lat,
-		Lng: mapLoc.Lng,
-	}
-	data, err := bike.GetNearbyCar()
-	if err != nil {
-		bikeChan <- chanStruct{
-			Error: err,
-			Data:  nil,
-			Type:  "ofo",
-		}
-	} else {
-		bikeChan <- chanStruct{
-			Error: nil,
-			Data:  data,
-			Type:  "ofo",
-		}
-	}
-}
-
-func getMapData(mapChan chan chanStruct, address string, city string) {
+func getMapData(mapChan chan chanData, address string, city string) {
 	mapObj := maplib.MapAddr{
 		Address: address,
 		City:    city,
@@ -140,13 +118,13 @@ func getMapData(mapChan chan chanStruct, address string, city string) {
 		log.WithFields(log.Fields{
 			"error": err,
 		}).Error("Cannot get map data")
-		mapChan <- chanStruct{
+		mapChan <- chanData{
 			Error: err,
 			Data:  nil,
 			Type:  "map",
 		}
 	} else {
-		mapChan <- chanStruct{
+		mapChan <- chanData{
 			Error: nil,
 			Data:  mapLoc,
 			Type:  "map",
@@ -154,28 +132,42 @@ func getMapData(mapChan chan chanStruct, address string, city string) {
 	}
 }
 
-func displayBikeData(bikeChan chanStruct, mapLoc maplib.MapLocation) {
+func getBikeData(bikeChan chan chanData, bike bikelib.BikeInterface, bikeType string) {
+	data, err := bike.GetNearbyCar()
+	if err != nil {
+		bikeChan <- chanData{
+			Error: err,
+			Data:  nil,
+			Type:  bikeType,
+		}
+	} else {
+		bikeChan <- chanData{
+			Error: nil,
+			Data:  data,
+			Type:  bikeType,
+		}
+	}
+}
+
+func displayBikeData(bikeChan chanData, mapLoc maplib.MapLocation) {
+	bikeList := bikeChan.Data.([]bikelib.BikeData)
+	var screen *color.Color
+
 	if bikeChan.Type == "mobike" {
-		bikeList := bikeChan.Data.([]bikelib.MobikeCar)
-		screen := color.New(color.FgHiMagenta)
+		screen = color.New(color.FgHiMagenta)
 		screen.Printf("\n---------------------\n")
 		screen.Printf("摩拜自行车, 共 %v 辆\n", len(bikeList))
 		screen.Printf("---------------------\n")
-		for _, el := range bikeList {
-			screen.Printf("车牌号: %v, 距离您: %v 米\n", el.DistID, el.Distance)
-		}
-	}
-
-	if bikeChan.Type == "ofo" {
-		bikeList := bikeChan.Data.([]bikelib.OfoCar)
-		screen := color.New(color.FgHiYellow)
+	} else {
+		screen = color.New(color.FgHiYellow)
 		screen.Printf("\n---------------------\n")
 		screen.Printf("Ofo 自行车, 共 %v 辆\n", len(bikeList))
 		screen.Printf("---------------------\n")
-		for _, el := range bikeList {
-			distance := int(maplib.GeoDistance(mapLoc.Lat, mapLoc.Lng, el.Lat, el.Lng))
-			screen.Printf("车牌号: %v, 距离您: %v 米\n", el.Carno, distance)
-		}
+	}
+
+	for _, el := range bikeList {
+		distance := maplib.GeoDistance(mapLoc.Lng, mapLoc.Lat, el.Lng, el.Lat)
+		screen.Printf("车牌号: %v, 距离您: %v 米\n", el.CarNo, int(distance))
 	}
 }
 

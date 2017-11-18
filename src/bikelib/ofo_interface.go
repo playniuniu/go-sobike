@@ -14,12 +14,13 @@ const ofoToken = "0ABE7990-A5A9-11E6-8FD5-016BD2CF67D2"
 
 // Ofobike struct
 type Ofobike struct {
-	Lat float64
-	Lng float64
+	Lat      float64
+	Lng      float64
+	CityCode string
 }
 
 // GetNearbyCar get all nearby car
-func (ofo *Ofobike) GetNearbyCar() ([]OfoCar, error) {
+func (ofo Ofobike) GetNearbyCar() ([]BikeData, error) {
 
 	params := url.Values{}
 	lat := strconv.FormatFloat(ofo.Lat, 'f', 6, 64)
@@ -37,7 +38,7 @@ func (ofo *Ofobike) GetNearbyCar() ([]OfoCar, error) {
 	return ofo.parseJSON(nearbyData)
 }
 
-func (ofo *Ofobike) parseJSON(jsonData []byte) ([]OfoCar, error) {
+func (ofo Ofobike) parseJSON(jsonData []byte) ([]BikeData, error) {
 	var parseData OfoJSON
 
 	err := json.Unmarshal(jsonData, &parseData)
@@ -53,5 +54,16 @@ func (ofo *Ofobike) parseJSON(jsonData []byte) ([]OfoCar, error) {
 		return nil, errors.New(parseData.Msg)
 	}
 
-	return parseData.Values.Info.Cars, nil
+	carList := parseData.Values.Info.Cars
+	bikeRes := make([]BikeData, len(carList))
+	for index, el := range carList {
+		bikeRes[index] = BikeData{
+			Lng:     el.Lng,
+			Lat:     el.Lat,
+			CarNo:   el.Carno,
+			CarType: "ofo",
+		}
+	}
+
+	return bikeRes, nil
 }
