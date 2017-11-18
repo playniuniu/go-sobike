@@ -58,7 +58,7 @@ func (mobike Mobike) parseJSON(jsonData []byte) ([]BikeData, error) {
 		bikeRes[index] = BikeData{
 			Lng:     el.DistX,
 			Lat:     el.DistY,
-			CarNo:   strconv.Itoa(el.DistNum),
+			CarNo:   el.DistID,
 			CarType: "mobike",
 		}
 	}
