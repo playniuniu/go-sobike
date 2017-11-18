@@ -63,6 +63,7 @@ func (mapaddr *MapAddr) parseJSON(jsonData []byte) (MapLocation, error) {
 
 	geoCode := parseData.Geocodes[0].Location
 	cityCode := parseData.Geocodes[0].Citycode
+	city := parseData.Geocodes[0].City
 	address := parseData.Geocodes[0].FormattedAddress
 
 	geoData := strings.Split(geoCode, ",")
@@ -83,6 +84,7 @@ func (mapaddr *MapAddr) parseJSON(jsonData []byte) (MapLocation, error) {
 		Lat:      lat,
 		CityCode: cityCode,
 		Address:  address,
+		City:     city,
 	}, nil
 }
 
@@ -90,6 +92,7 @@ func (mapaddr *MapAddr) parseJSON(jsonData []byte) (MapLocation, error) {
 type MapLocation struct {
 	Lat      float64
 	Lng      float64
+	City     string
 	CityCode string
 	Address  string
 }
